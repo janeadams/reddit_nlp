@@ -2,3 +2,4 @@ requests
 datetime
 pandas
 nltk
+numpy
