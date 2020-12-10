@@ -46,11 +46,12 @@ def get_days(start_date, end_date):
         before_epoch = int((start_time + delta).timestamp())
         # Format current query date as string (for file naming, etc.)
         date = start_time.date().strftime("%Y-%m-%d")
-        print(f'https://api.pushshift.io/reddit/search/submission/?subreddit={subreddit}&before={before_epoch}&after={after_epoch}')
+        URL = f'https://api.pushshift.io/reddit/search/submission/?subreddit={subreddit}&size=100&before={before_epoch}&after={after_epoch}'
+        print(f'Querying {date} to {(start_time + delta).date().strftime("%Y-%m-%d")}')
+        print(URL)
         try:
-            print(f'Querying {date} to {(start_time + delta).date().strftime("%Y-%m-%d")}')
             # Query API, specifying subreddit and time epoch
-            r = requests.get(f'https://api.pushshift.io/reddit/search/submission/?subreddit={subreddit}&before={before_epoch}&after={after_epoch}').json()
+            r = requests.get(URL).json()
             all_data[date] = r['data']
             print(f'{date} number of posts: {len(r["data"])}')
             # Save raw data (incl. metadata) in json files for each date
@@ -203,13 +204,16 @@ def get_ngrams(start_date, end_date):
         # Open the aggregations for this date
         agg_df = pd.read_csv(f'data/wordcounts/_{date}.csv').set_index('word')
         for word in agg_df.index:
-            count = agg_df.loc[word]['count']
-            try:
-                with open(f'data/ngrams/{word}.csv', 'a') as csvfile:
-                    writer = csv.writer(csvfile)
-                    writer.writerow([date,count])
-            except:
-                pass
+            if word[0].isdigit():
+                print(f'{word} begins with a digit; omitting from ngram data')
+            else:
+                count = agg_df.loc[word]['count']
+                try:
+                    with open(f'data/ngrams/{word}.csv', 'a') as csvfile:
+                        writer = csv.writer(csvfile)
+                        writer.writerow([date,count])
+                except:
+                    pass
         start_time += delta
     function_elapsed_time = time.time() - function_start_time
     process_elapsed_time = time.time() - process_start_time
