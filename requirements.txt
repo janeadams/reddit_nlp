@@ -4,6 +4,6 @@ datetime
 os
 pickle
 csv
-pandas as pd
+pandas
 nltk
 time
