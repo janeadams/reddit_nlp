@@ -1,7 +1,5 @@
 requests
 datetime
-pickle
-csv
 pandas
 nltk
 time
