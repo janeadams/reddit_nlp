@@ -6,9 +6,12 @@ import pickle
 import csv
 import pandas as pd
 import nltk
+import time
 from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer
 from nltk.probability import FreqDist
+
+process_start_time = time.time()
 
 print("Which subreddit (case-sensitive) would you like to query? (Don't include 'r/'):")
 subreddit = input()
@@ -31,6 +34,7 @@ all_data = {}
 post_data = {}
 
 def get_days(start_date, end_date):
+    function_start_time = time.time()
     # Convert dates to datetime format
     start_time = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     end_time = datetime.datetime.strptime(end_date, '%Y-%m-%d')
@@ -66,10 +70,15 @@ def get_days(start_date, end_date):
                     file.close()
                     n+=1 # Increase n by 1 for next post number
                 except:
-                    print(f'No selftext; is it possible that {subreddit} didnt exist on {date}?')
+                    print(f'No selftext in {subreddit} API response on {date}')
         except:
-            print(f'Error querying {date} to {(start_time + delta).date}')
+            print(f'Error querying {date} to {(start_time + delta).date().strftime("%Y-%m-%d")}')
         start_time += delta
+    function_elapsed_time = time.time() - function_start_time
+    process_elapsed_time = time.time() - process_start_time
+    print(f'Finished quering API!')
+    print(f'Elapsed function time: {function_elapsed_time}')
+    print(f'Elapsed process time: {process_elapsed_time}')
         
 get_days(start, end)
         
@@ -79,6 +88,7 @@ nltk.download('punkt')
 tokenizer = RegexpTokenizer(r'\w+')
 
 def tokenize_files(start_date, end_date):
+    function_start_time = time.time()
     try: os.mkdir(f'data/tokens')
     except: print('data/tokens directory exists')
     # Convert dates to datetime format
@@ -113,10 +123,16 @@ def tokenize_files(start_date, end_date):
             except Exception: pass #print(f"Couldn't read {date} post #{n}")
             n+=1
         start_time += delta
+    function_elapsed_time = time.time() - function_start_time
+    process_elapsed_time = time.time() - process_start_time
+    print(f'Finished tokenizing post files!')
+    print(f'Elapsed function time: {function_elapsed_time}')
+    print(f'Elapsed process time: {process_elapsed_time}')
         
 tokenize_files(start, end)
 
 def count_words(start_date, end_date):
+    function_start_time = time.time()
     try: os.mkdir(f'data/wordcounts')
     except: print('data/wordcounts directory exists')
     # Convert dates to datetime format
@@ -163,10 +179,16 @@ def count_words(start_date, end_date):
         # Save the aggregations for the whole day directly into the wordcount folder
         agg_df.to_csv(f'data/wordcounts/_{date}.csv',index=False)
         start_time += delta
+    function_elapsed_time = time.time() - function_start_time
+    process_elapsed_time = time.time() - process_start_time
+    print(f'Finished counting words!')
+    print(f'Elapsed function time: {function_elapsed_time}')
+    print(f'Elapsed process time: {process_elapsed_time}')
         
 count_words(start,end)
 
 def get_ngrams(start_date, end_date):
+    function_start_time = time.time()
     try: os.mkdir(f'data/ngrams')
     except: print('data/ngrams directory exists')
     # Convert dates to datetime format
@@ -189,6 +211,13 @@ def get_ngrams(start_date, end_date):
             except:
                 pass
         start_time += delta
+    function_elapsed_time = time.time() - function_start_time
+    process_elapsed_time = time.time() - process_start_time
+    print(f'Finished getting ngram timeseries!')
+    print(f'Elapsed function time: {function_elapsed_time}')
+    print(f'Elapsed process time: {process_elapsed_time}')
 
 get_ngrams(start,end)
-print('Finished!')
+
+process_elapsed_time = time.time() - process_start_time
+print(f'Finished script! Elapsed time: {process_elapsed_time}')
