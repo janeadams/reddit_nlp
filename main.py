@@ -64,60 +64,66 @@ def get_days(start_date, end_date):
     # Advance one day at a time
     delta = datetime.timedelta(days=1)
     while start_time <= end_time:
+        cached=False
         # Convert to integer epoch for querying Pushshift API
         after_epoch = int(start_time.timestamp())
         before_epoch = int((start_time + delta).timestamp())
         # Format current query date as string (for file naming, etc.)
         date = start_time.date().strftime("%Y-%m-%d")
-        URL = f'https://api.pushshift.io/reddit/search/submission/?subreddit={subreddit}&size=100&before={before_epoch}&after={after_epoch}&fields=selftext,id'
-        print()
-        print(f'Querying r/{subreddit} for posts on {date}...')
-        try:
-            # Query API, specifying subreddit and time epoch
-            r = requests.get(URL).json()
-            post_count = len(r["data"])
-            print(f'Number of posts: {post_count}/100 on {date}')
-            # Create a posts folder for each date
+        if date in get_dirs(f'{subreddit}/data/posts/'):
+            cached=True
+            print(f'{date} already in data folder; skipping API query')
+        if not cached:
+            URL = f'https://api.pushshift.io/reddit/search/submission/?subreddit={subreddit}&size=100&before={before_epoch}&after={after_epoch}&fields=selftext,id'
+            print()
+            print(f'Querying r/{subreddit} for posts on {date}...')
             try:
-                os.mkdir(f'{subreddit}/data/posts/{date}')
-            except:
-                print(f'{date} folder exists')
-            removed = 0
-            for post_obj in r['data']: # For each post
-                n = post_obj['id']
+                # Query API, specifying subreddit and time epoch
+                r = requests.get(URL).json()
+                post_count = len(r["data"])
+                print(f'Number of posts: {post_count}/100 on {date}')
+                # Create a posts folder for each date
                 try:
-                    post_text = post_obj['selftext'] # Get the raw text of the post
-                    if len(post_text)>1:
-                        file = open(f'{subreddit}/data/posts/{date}/{n}.txt',"w") # Save it in a text file
-                        file.write(post_text)
-                        file.close()
-                    else:
-                        removed+=1
+                    os.mkdir(f'{subreddit}/data/posts/{date}')
                 except:
-                    print(f'Error saving post data from r/{subreddit} API response on {date} id {n}.')
-                    print(f'Find detailed post data here: https://api.pushshift.io/reddit/search/submission/?ids={n}')
-            if removed > 0:
-                print(f'{removed}/{post_count} posts from {date} have since been removed')
-            try:
-                with open(f'{subreddit}/data/post_counts.csv', 'a') as csvfile:
-                    writer = csv.writer(csvfile)
-                    writer.writerow([date,post_count])
+                    #print(f'{date} folder exists')
+                    pass
+                removed = 0
+                for post_obj in r['data']: # For each post
+                    n = post_obj['id']
+                    try:
+                        post_text = post_obj['selftext'] # Get the raw text of the post
+                        if len(post_text)>1:
+                            file = open(f'{subreddit}/data/posts/{date}/{n}.txt',"w") # Save it in a text file
+                            file.write(post_text)
+                            file.close()
+                        else:
+                            removed+=1
+                    except:
+                        print(f'Error saving post data from r/{subreddit} API response on {date} id {n}.')
+                        print(f'Find detailed post data here: https://api.pushshift.io/reddit/search/submission/?ids={n}')
+                if removed > 0:
+                    print(f'{removed}/{post_count} posts from {date} have since been removed')
+                try:
+                    with open(f'{subreddit}/data/post_counts.csv', 'a') as csvfile:
+                        writer = csv.writer(csvfile)
+                        writer.writerow([date,post_count])
+                except:
+                    print(f'Error writing post count for {date} to file {f"{subreddit}/data/post_counts.csv"}')
             except:
-                print(f'Error writing post count for {date} to file {f"{subreddit}/data/post_counts.csv"}')
-        except:
-            if requests.get(URL).text[0] == "<":
-                print('HTML ERR RESPONSE')
-                with open(f'{subreddit}/data/post_counts.csv', 'a') as csvfile:
-                    writer = csv.writer(csvfile)
-                    writer.writerow([date,'HTML_ERR'])
-                print(f'HTML Error querying r/{subreddit} on {date}.')
-                print(f"It's possible that the server is just temporarily down or timed out;")
-                print(f'If this is the case, the backfill() function should catch this missing date later and fill it in')
-            else:
-                not_recorded[date]=URL
-                print(f'NON-html error querying r/{subreddit} on {date}. Check the URL for errors:')
-                print(f'{URL}')
-                print(f"It's possible that the JSON file is corrupted (e.g. double-quotes are not escaped)")
+                if requests.get(URL).text[0] == "<":
+                    print('HTML ERR RESPONSE')
+                    with open(f'{subreddit}/data/post_counts.csv', 'a') as csvfile:
+                        writer = csv.writer(csvfile)
+                        writer.writerow([date,'HTML_ERR'])
+                    print(f'HTML Error querying r/{subreddit} on {date}.')
+                    print(f"It's possible that the server is just temporarily down or timed out;")
+                    print(f'If this is the case, the backfill() function should catch this missing date later and fill it in')
+                else:
+                    not_recorded[date]=URL
+                    print(f'NON-html error querying r/{subreddit} on {date}. Check the URL for errors:')
+                    print(f'{URL}')
+                    print(f"It's possible that the JSON file is corrupted (e.g. double-quotes or emoticons are not escaped)")
         start_time += delta
     function_elapsed_time = time.time() - function_start_time
     process_elapsed_time = time.time() - process_start_time
@@ -150,7 +156,8 @@ def tokenize_files(start_date, end_date):
         try:
             os.mkdir(f'{subreddit}/data/tokens/{date}')
         except:
-            print(f'{date} folder exists')
+            #print(f'{date} folder exists')
+            pass
         #print(f'Files in {date} posts folder: {get_files(f"data/posts/{date}")}')
         for post_id in get_files(f'{subreddit}/data/posts/{date}'):
             try:
@@ -224,7 +231,7 @@ def count_words(start_date, end_date):
         day_df.to_csv(f'{subreddit}/data/wordcounts/{date}/_{date}.csv')
         # Aggregate all the wordcounts for the whole day
         agg_df = pd.DataFrame(day_df.groupby('word')['count'].sum()).reset_index()
-        agg_df = agg_df.sort_values(by='count', ascending=False)
+        agg_df = agg_df.sort_values(by='count', ascending=False).dropna()
         # Save the aggregations for the whole day directly into the wordcount folder
         agg_df.to_csv(f'{subreddit}/data/wordcounts/_{date}.csv',index=False)
         start_time += delta
@@ -256,20 +263,21 @@ def get_ngrams(start_date, end_date):
         date = start_time.date().strftime("%Y-%m-%d")
         print(f'Processing ngrams for {date}... ({i}/{num_dates})')
         # Open the aggregations for this date
-        agg_df = pd.read_csv(f'{subreddit}/data/wordcounts/_{date}.csv').set_index('word')
+        agg_df = pd.read_csv(f'{subreddit}/data/wordcounts/_{date}.csv').set_index('word').dropna()
         for word in agg_df.index:
             word = str(word)
             if word[0].isdigit():
                 #print(f'{word} begins with a digit; omitting from ngram data')
                 pass
             else:
-                count = agg_df.loc[word]['count']
                 try:
+                    count = agg_df.loc[word]['count']
                     with open(f'{subreddit}/data/ngrams/{word}.csv', 'a') as csvfile:
                         writer = csv.writer(csvfile)
                         writer.writerow([date,count])
                 except:
-                    pass
+                    print(f'Error processing ngram {word}')
+                    #pass
         start_time += delta
         i+=1
     function_elapsed_time = time.time() - function_start_time
