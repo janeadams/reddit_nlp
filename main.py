@@ -1,6 +1,7 @@
 import json
 import requests
 import datetime
+from psaw import PushshiftAPI
 import os
 from os import walk
 import pickle
@@ -14,6 +15,10 @@ from nltk.tokenize import RegexpTokenizer
 from nltk.probability import FreqDist
 
 process_start_time = time.time()
+
+print('Setting up psaw API connection...')
+print('Learn more about psaw here: https://github.com/dmarx/psaw')
+api = PushshiftAPI()
 
 print("Which subreddit (case-sensitive) would you like to query? (Don't include 'r/'):")
 subreddit = input()
@@ -74,13 +79,16 @@ def get_days(start_date, end_date):
             cached=True
             print(f'{date} already in data folder; skipping API query')
         if not cached:
-            URL = f'https://api.pushshift.io/reddit/search/submission/?subreddit={subreddit}&size=100&before={before_epoch}&after={after_epoch}&fields=selftext,id'
+            # URL = f'https://api.pushshift.io/reddit/search/submission/?subreddit={subreddit}&size=100&before={before_epoch}&after={after_epoch}&fields=selftext,id'
             print()
             print(f'Querying r/{subreddit} for posts on {date}...')
             try:
                 # Query API, specifying subreddit and time epoch
-                r = requests.get(URL).json() # <------ TODO: SANITIZE OUT EMOTICONS :)
-                post_count = len(r["data"])
+                posts = list(api.search_submissions(after=after_epoch, before=before_epoch,
+                            subreddit=subreddit,
+                            filter=['id','selftext'],
+                            limit=100))
+                post_count = len(posts)
                 print(f'Number of posts: {post_count}/100 on {date}')
                 # Create a posts folder for each date
                 try:
@@ -89,41 +97,33 @@ def get_days(start_date, end_date):
                     #print(f'{date} folder exists')
                     pass
                 removed = 0
-                for post_obj in r['data']: # For each post
-                    n = post_obj['id']
+                for post in posts: # For each post
                     try:
-                        post_text = post_obj['selftext'] # Get the raw text of the post
-                        if len(post_text)>1:
+                        n = post.d_['id']
+                        text = post.d_['selftext']
+                        if (len(text)>1) and (text != '[deleted]') and (text != '[removed]'):
                             file = open(f'{subreddit}/data/posts/{date}/{n}.txt',"w") # Save it in a text file
-                            file.write(post_text)
+                            file.write(text)
                             file.close()
                         else:
                             removed+=1
                     except:
-                        #print(f'Error saving post data from r/{subreddit} API response on {date} id {n}')
-                        #print(f'Find detailed post data here: https://api.pushshift.io/reddit/search/submission/?ids={n}')
+                        print(f'Error saving post data from r/{subreddit} API response on {date} id {n}')
+                        print(f'Find detailed post data here: https://api.pushshift.io/reddit/search/submission/?ids={n}')
                         pass
                 if removed > 0:
                     print(f'{removed}/{post_count} posts from {date} have since been removed')
                 try:
                     with open(f'{subreddit}/data/post_counts.csv', 'a') as csvfile:
                         writer = csv.writer(csvfile)
-                        writer.writerow([date,post_count])
+                        writer.writerow([date,post_count-removed])
                 except:
                     print(f'Error writing post count for {date} to file {f"{subreddit}/data/post_counts.csv"}')
             except:
-                if requests.get(URL).text[0] == "<":
-                    with open(f'{subreddit}/data/post_counts.csv', 'a') as csvfile:
-                        writer = csv.writer(csvfile)
-                        writer.writerow([date,'HTML_ERR'])
-                    print(f'HTML Error querying r/{subreddit} on {date}')
-                    print(f"It's possible that the server is just temporarily down or timed out")
-                    #print(f'If this is the case, the backfill() function should catch this missing date later and fill it in')
-                else:
-                    not_recorded[date]=URL
-                    print(f'NON-html error querying r/{subreddit} on {date}. Check the URL for errors:')
-                    print(f'{URL}')
-                    #print(f"It's possible that the JSON file is corrupted (e.g. double-quotes or emoticons are not escaped)")
+                with open(f'{subreddit}/data/post_counts.csv', 'a') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow([date,'ERR'])
+                print(f'Error querying r/{subreddit} on {date}')
         start_time += delta
     function_elapsed_time = time.time() - function_start_time
     process_elapsed_time = time.time() - process_start_time

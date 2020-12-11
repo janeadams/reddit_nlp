@@ -3,3 +3,4 @@ datetime
 pandas
 nltk
 numpy
+psaw
