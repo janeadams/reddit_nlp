@@ -79,7 +79,7 @@ def get_days(start_date, end_date):
             print(f'Querying r/{subreddit} for posts on {date}...')
             try:
                 # Query API, specifying subreddit and time epoch
-                r = requests.get(URL).json()
+                r = requests.get(URL).json() # <------ TODO: SANITIZE OUT EMOTICONS :)
                 post_count = len(r["data"])
                 print(f'Number of posts: {post_count}/100 on {date}')
                 # Create a posts folder for each date
@@ -313,9 +313,9 @@ def backfill():
             end_date = end_time.date().strftime("%Y-%m-%d")
             try:
                 get_days(start_date, end_date)
-                tokenize_files(start, end)
-                count_words(start,end)
-                get_ngrams(start,end)
+                tokenize_files(start_date, end_date)
+                count_words(start_date,end_date)
+                get_ngrams(start_date,end_date)
             except:
                 print(f'Error backfilling {m}')
             i+=1
