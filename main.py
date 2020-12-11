@@ -76,28 +76,34 @@ def get_days(start_date, end_date):
             # Query API, specifying subreddit and time epoch
             r = requests.get(URL).json()
             post_count = len(r["data"])
-            try:
-                with open(f'{subreddit}/data/post_counts.csv', 'a') as csvfile:
-                    writer = csv.writer(csvfile)
-                    writer.writerow([date,post_count])
-            except:
-                print('Error reading json')
             print(f'Number of posts: {post_count}/100 on {date}')
             # Create a posts folder for each date
             try:
                 os.mkdir(f'{subreddit}/data/posts/{date}')
             except:
                 print(f'{date} folder exists')
+            removed = 0
             for post_obj in r['data']: # For each post
                 n = post_obj['id']
                 try:
                     post_text = post_obj['selftext'] # Get the raw text of the post
-                    file = open(f'{subreddit}/data/posts/{date}/{n}.txt',"w") # Save it in a text file
-                    file.write(post_text)
-                    file.close()
+                    if len(post_text)>1:
+                        file = open(f'{subreddit}/data/posts/{date}/{n}.txt',"w") # Save it in a text file
+                        file.write(post_text)
+                        file.close()
+                    else:
+                        removed+=1
                 except:
                     print(f'Error saving post data from r/{subreddit} API response on {date} id {n}.')
                     print(f'Find detailed post data here: https://api.pushshift.io/reddit/search/submission/?ids={n}')
+            if removed > 0:
+                print(f'{removed}/{post_count} posts from {date} have since been removed')
+            try:
+                with open(f'{subreddit}/data/post_counts.csv', 'a') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow([date,post_count])
+            except:
+                print(f'Error writing post count for {date} to file {f"{subreddit}/data/post_counts.csv"}')
         except:
             if requests.get(URL).text[0] == "<":
                 print('HTML ERR RESPONSE')
@@ -111,7 +117,7 @@ def get_days(start_date, end_date):
                 not_recorded[date]=URL
                 print(f'NON-html error querying r/{subreddit} on {date}. Check the URL for errors:')
                 print(f'{URL}')
-                print(f"It's possible that the JSON file is corrupted (e.g. doublequotes are not escaped)")
+                print(f"It's possible that the JSON file is corrupted (e.g. double-quotes are not escaped)")
         start_time += delta
     function_elapsed_time = time.time() - function_start_time
     process_elapsed_time = time.time() - process_start_time
