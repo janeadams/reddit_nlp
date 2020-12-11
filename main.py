@@ -100,8 +100,9 @@ def get_days(start_date, end_date):
                         else:
                             removed+=1
                     except:
-                        print(f'Error saving post data from r/{subreddit} API response on {date} id {n}.')
-                        print(f'Find detailed post data here: https://api.pushshift.io/reddit/search/submission/?ids={n}')
+                        #print(f'Error saving post data from r/{subreddit} API response on {date} id {n}')
+                        #print(f'Find detailed post data here: https://api.pushshift.io/reddit/search/submission/?ids={n}')
+                        pass
                 if removed > 0:
                     print(f'{removed}/{post_count} posts from {date} have since been removed')
                 try:
@@ -112,18 +113,17 @@ def get_days(start_date, end_date):
                     print(f'Error writing post count for {date} to file {f"{subreddit}/data/post_counts.csv"}')
             except:
                 if requests.get(URL).text[0] == "<":
-                    print('HTML ERR RESPONSE')
                     with open(f'{subreddit}/data/post_counts.csv', 'a') as csvfile:
                         writer = csv.writer(csvfile)
                         writer.writerow([date,'HTML_ERR'])
-                    print(f'HTML Error querying r/{subreddit} on {date}.')
-                    print(f"It's possible that the server is just temporarily down or timed out;")
-                    print(f'If this is the case, the backfill() function should catch this missing date later and fill it in')
+                    print(f'HTML Error querying r/{subreddit} on {date}')
+                    print(f"It's possible that the server is just temporarily down or timed out")
+                    #print(f'If this is the case, the backfill() function should catch this missing date later and fill it in')
                 else:
                     not_recorded[date]=URL
                     print(f'NON-html error querying r/{subreddit} on {date}. Check the URL for errors:')
                     print(f'{URL}')
-                    print(f"It's possible that the JSON file is corrupted (e.g. double-quotes or emoticons are not escaped)")
+                    #print(f"It's possible that the JSON file is corrupted (e.g. double-quotes or emoticons are not escaped)")
         start_time += delta
     function_elapsed_time = time.time() - function_start_time
     process_elapsed_time = time.time() - process_start_time
@@ -306,16 +306,11 @@ def backfill():
         i=0
         for m in missing:
             print(f'Backfilling {m}... ({i}/{len(missing)}')
-            start_time = datetime.datetime.strptime(m, '%Y-%m-%d')
-            delta = datetime.timedelta(days=1)
-            end_time = start_time + delta
-            start_date = start_time.date().strftime("%Y-%m-%d")
-            end_date = end_time.date().strftime("%Y-%m-%d")
             try:
-                get_days(start_date, end_date)
-                tokenize_files(start_date, end_date)
-                count_words(start_date,end_date)
-                get_ngrams(start_date,end_date)
+                get_days(m, m)
+                tokenize_files(m, m)
+                count_words(m, m)
+                get_ngrams(m, m)
             except:
                 print(f'Error backfilling {m}')
             i+=1
@@ -327,7 +322,7 @@ def backfill():
         print(f'Elapsed backfilling function time: {np.around(function_elapsed_time, 1)}s ({np.around(function_elapsed_time/60, 2)} minutes)')
         print(f'Elapsed process time: {np.around(process_elapsed_time, 1)}s ({np.around(process_elapsed_time/60, 2)} minutes)')
 
-backfill()
+#backfill()
 
 process_elapsed_time = time.time() - process_start_time
 print()
