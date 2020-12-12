@@ -67,6 +67,8 @@ def get_dirs(path):
 
 def get_days(start_date, end_date):
     function_start_time = time.time()
+    print()
+    print(f'Querying r/{subreddit} API from {start_date} to {end_date}...')
     # Convert dates to datetime format
     start_time = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     end_time = datetime.datetime.strptime(end_date, '%Y-%m-%d')
@@ -160,16 +162,15 @@ def tokenize_files():
                 path = f'{subreddit}/data/posts/{date}/{post_id}.txt'
                 file = open(path,"r")
                 # Remove newlines and apostrophes; lowercase everything
-                post_string = file.read().replace('\n', '').replace("'","").lower()
+                post_string = file.read().replace('\n', '').replace("'","").replace('_','').lower()
                 # Tokenize string (creates an array of strings)
                 word_tokens = tokenizer.tokenize(post_string) 
                 tokenized_post = []
-                for w in word_tokens:  
-                    if w not in stop_words: # Remove stopwords
-                        tokenized_post.append(w)
-                #print(tokenized_post)
-                # Save as pickle
-                pickle.dump(tokenized_post, open(f'{subreddit}/data/tokens/{date}/{post_id}.pkl', 'wb'))
+                for w in word_tokens:
+                    # Remove stopwords, digits, and underscore ngrams
+                    if (w not in stop_words) and (not str(w)[0].isdigit()): 
+                            tokenized_post.append(w)
+                            pickle.dump(tokenized_post, open(f'{subreddit}/data/tokens/{date}/{post_id}.pkl', 'wb'))
             except: print(f"Couldn't read {date} post id {post_id} at {path}")
     function_elapsed_time = time.time() - function_start_time
     process_elapsed_time = time.time() - process_start_time
@@ -241,18 +242,14 @@ def get_ngrams():
         agg_df = pd.read_csv(f'{subreddit}/data/wordcounts/{date}.csv').set_index('word').dropna()
         for word in agg_df.index:
             word = str(word)
-            if word[0].isdigit():
-                #print(f'{word} begins with a digit; omitting from ngram data')
-                pass
-            else:
-                try:
-                    count = agg_df.loc[word]['count']
-                    with open(f'{subreddit}/data/ngrams/{word}.csv', 'a') as csvfile:
-                        writer = csv.writer(csvfile)
-                        writer.writerow([date,count])
-                except:
-                    print(f'Error processing ngram {word}')
-                    #pass
+            try:
+                count = agg_df.loc[word]['count']
+                with open(f'{subreddit}/data/ngrams/{word}.csv', 'a') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow([date,count])
+            except:
+                print(f'Error processing ngram {word}')
+                #pass
     function_elapsed_time = time.time() - function_start_time
     process_elapsed_time = time.time() - process_start_time
     print()

@@ -5,3 +5,5 @@ nltk
 numpy
 psaw
 progressbar2
+plotly
+dash
