@@ -1,6 +1,7 @@
 import json
 import requests
 import datetime
+import progressbar
 from psaw import PushshiftAPI
 import os
 from os import walk
@@ -19,7 +20,7 @@ process_start_time = time.time()
 print('Setting up psaw API connection...')
 print('Learn more about psaw here: https://github.com/dmarx/psaw')
 api = PushshiftAPI()
-
+print()
 print("Which subreddit (case-sensitive) would you like to query? (Don't include 'r/'):")
 subreddit = input()
 print()
@@ -46,18 +47,21 @@ end = input()
 all_data = {}
 post_data = {}
 not_recorded = {}
+n_days = 1
 
 def get_files(path):
     files = []
     for (dirpath, dirnames, filenames) in walk(path):
         files.extend(filenames)
-    str_files = [str(f) for f in files]
+        break
+    str_files = [str(f)[:-4] for f in files]
     return str_files
 
 def get_dirs(path):
     directories = []
     for (dirpath, dirnames, filenames) in walk(path):
         directories.extend(dirnames)
+        break
     str_directories = [str(d) for d in directories]
     return str_directories
 
@@ -67,21 +71,18 @@ def get_days(start_date, end_date):
     start_time = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     end_time = datetime.datetime.strptime(end_date, '%Y-%m-%d')
     # Advance one day at a time
-    delta = datetime.timedelta(days=1)
-    while start_time <= end_time:
+    date_list = [start_time + datetime.timedelta(days=x) for x in range(0, (end_time-start_time).days)]
+    for search_time in progressbar.progressbar(date_list, redirect_stdout=True):
         cached=False
         # Convert to integer epoch for querying Pushshift API
-        after_epoch = int(start_time.timestamp())
-        before_epoch = int((start_time + delta).timestamp())
+        after_epoch = int(search_time.timestamp())
+        before_epoch = int((search_time + datetime.timedelta(days=1)).timestamp())
         # Format current query date as string (for file naming, etc.)
-        date = start_time.date().strftime("%Y-%m-%d")
+        date = search_time.date().strftime("%Y-%m-%d")
         if date in get_dirs(f'{subreddit}/data/posts/'):
             cached=True
             print(f'{date} already in data folder; skipping API query')
         if not cached:
-            # URL = f'https://api.pushshift.io/reddit/search/submission/?subreddit={subreddit}&size=100&before={before_epoch}&after={after_epoch}&fields=selftext,id'
-            print()
-            print(f'Querying r/{subreddit} for posts on {date}...')
             try:
                 # Query API, specifying subreddit and time epoch
                 posts = list(api.search_submissions(after=after_epoch, before=before_epoch,
@@ -89,7 +90,7 @@ def get_days(start_date, end_date):
                             filter=['id','selftext'],
                             limit=100))
                 post_count = len(posts)
-                print(f'Number of posts: {post_count}/100 on {date}')
+                #print(f'Number of posts: {post_count}/100 on {date}')
                 # Create a posts folder for each date
                 try:
                     os.mkdir(f'{subreddit}/data/posts/{date}')
@@ -108,11 +109,10 @@ def get_days(start_date, end_date):
                         else:
                             removed+=1
                     except:
-                        print(f'Error saving post data from r/{subreddit} API response on {date} id {n}')
-                        print(f'Find detailed post data here: https://api.pushshift.io/reddit/search/submission/?ids={n}')
+                        #print(f'Error saving post data from r/{subreddit} API response on {date} id {n}')
+                        #print(f'Find detailed post data here: https://api.pushshift.io/reddit/search/submission/?ids={n}')
                         pass
-                if removed > 0:
-                    print(f'{removed}/{post_count} posts from {date} have since been removed')
+                #if removed > 0: print(f'{removed}/{post_count} posts from {date} have since been removed')
                 try:
                     with open(f'{subreddit}/data/post_counts.csv', 'a') as csvfile:
                         writer = csv.writer(csvfile)
@@ -124,7 +124,6 @@ def get_days(start_date, end_date):
                     writer = csv.writer(csvfile)
                     writer.writerow([date,'ERR'])
                 print(f'Error querying r/{subreddit} on {date}')
-        start_time += delta
     function_elapsed_time = time.time() - function_start_time
     process_elapsed_time = time.time() - process_start_time
     print()
@@ -139,19 +138,14 @@ stop_words = set(stopwords.words('english'))
 nltk.download('punkt', quiet=True)
 tokenizer = RegexpTokenizer(r'\w+')
 
-def tokenize_files(start_date, end_date):
-    print(f'Tokenizing post files for {start_date} to {end_date}...')
+def tokenize_files():
+    print(f'Tokenizing post files for {start} to {end}...')
     function_start_time = time.time()
     try: os.mkdir(f'{subreddit}/data/tokens')
     except: print(f'{subreddit}/data/tokens directory exists')
-    # Convert dates to datetime format
-    start_time = datetime.datetime.strptime(start_date, '%Y-%m-%d')
-    end_time = datetime.datetime.strptime(end_date, '%Y-%m-%d')
-    # Advance one day at a time
-    delta = datetime.timedelta(days=1)
-    while start_time <= end_time:
-        # Format current query date as string (for file naming, etc.)
-        date = start_time.date().strftime("%Y-%m-%d")
+    # Get list of dates:
+    dates = get_dirs(f'{subreddit}/data/posts/')
+    for date in progressbar.progressbar(dates, redirect_stdout=True):
         # Create a tokens folder for each date
         try:
             os.mkdir(f'{subreddit}/data/tokens/{date}')
@@ -159,10 +153,11 @@ def tokenize_files(start_date, end_date):
             #print(f'{date} folder exists')
             pass
         #print(f'Files in {date} posts folder: {get_files(f"data/posts/{date}")}')
-        for post_id in get_files(f'{subreddit}/data/posts/{date}'):
+        posts = get_files(f'{subreddit}/data/posts/{date}')
+        for post_id in posts:
             try:
                 # Read the text data for each post
-                path = f'{subreddit}/data/posts/{date}/{post_id}'
+                path = f'{subreddit}/data/posts/{date}/{post_id}.txt'
                 file = open(path,"r")
                 # Remove newlines and apostrophes; lowercase everything
                 post_string = file.read().replace('\n', '').replace("'","").lower()
@@ -174,9 +169,8 @@ def tokenize_files(start_date, end_date):
                         tokenized_post.append(w)
                 #print(tokenized_post)
                 # Save as pickle
-                pickle.dump(tokenized_post, open(f'{subreddit}/data/tokens/{date}/{post_id[:-4]}.pkl', 'wb'))
-            except: print(f"Couldn't read {date} post id {post_id[:-4]} at {path}")
-        start_time += delta
+                pickle.dump(tokenized_post, open(f'{subreddit}/data/tokens/{date}/{post_id}.pkl', 'wb'))
+            except: print(f"Couldn't read {date} post id {post_id} at {path}")
     function_elapsed_time = time.time() - function_start_time
     process_elapsed_time = time.time() - process_start_time
     print()
@@ -184,21 +178,15 @@ def tokenize_files(start_date, end_date):
     print(f'Elapsed tokenize function time: {np.around(function_elapsed_time, 1)}s ({np.around(function_elapsed_time/60, 2)} minutes)')
     print(f'Elapsed process time: {np.around(process_elapsed_time, 1)}s ({np.around(process_elapsed_time/60, 2)} minutes)')
         
-tokenize_files(start, end)
+tokenize_files()
 
-def count_words(start_date, end_date):
-    print(f'Getting wordcounts for {start_date} to {end_date}...')
+def count_words():
+    print(f'Getting wordcounts for {start} to {end}...')
     function_start_time = time.time()
     try: os.mkdir(f'{subreddit}/data/wordcounts')
     except: print(f'{subreddit}/data/wordcounts directory exists')
-    # Convert dates to datetime format
-    start_time = datetime.datetime.strptime(start_date, '%Y-%m-%d')
-    end_time = datetime.datetime.strptime(end_date, '%Y-%m-%d')
-    # Advance one day at a time
-    delta = datetime.timedelta(days=1)
-    while start_time <= end_time:
-        # Format current query date as string (for file naming, etc.)
-        date = start_time.date().strftime("%Y-%m-%d")
+    dates = get_dirs(f'{subreddit}/data/tokens/')
+    for date in progressbar.progressbar(dates, redirect_stdout=True):
         # Create a dataframe for the whole day
         day_df = pd.DataFrame(columns=['post_number','count','word'])
         try:
@@ -208,7 +196,7 @@ def count_words(start_date, end_date):
         #print(f'Files in {date} token folder: {get_files(f"data/tokens/{date}")}')
         for post_id in get_files(f'{subreddit}/data/tokens/{date}'):
             #try:
-            path = f'{subreddit}/data/tokens/{date}/{post_id}'
+            path = f'{subreddit}/data/tokens/{date}/{post_id}.pkl'
             # Load pickled token file for each post
             tokenized_post = pickle.load(open(path, 'rb'))
             # Obtain the word counts for each token
@@ -218,7 +206,7 @@ def count_words(start_date, end_date):
             df = pd.DataFrame.from_dict(dict(word_counts), orient='index',
                        columns=['count']).sort_values(by='count', ascending=False).reset_index()
             # Save the dataframe of token counts to a csv in the date folder
-            df.to_csv(f'{subreddit}/data/wordcounts/{date}/{post_id[:-4]}.csv',index=False)
+            df.to_csv(f'{subreddit}/data/wordcounts/{date}/{post_id}.csv',index=False)
             # Add additional post data to the dataframe and format for integration into full day dataframe
             df['post_number']=post_id[:-4]
             df.reset_index(inplace=True)
@@ -227,14 +215,11 @@ def count_words(start_date, end_date):
             day_df = day_df.append(df, ignore_index=True)
             #except: print(f"Couldn't read {date} post #{post_id[:-4]} at path {path}")
         #print(day_df)
-        # Save all the post wordcounts into a csv within the date folder
-        day_df.to_csv(f'{subreddit}/data/wordcounts/{date}/_{date}.csv')
         # Aggregate all the wordcounts for the whole day
         agg_df = pd.DataFrame(day_df.groupby('word')['count'].sum()).reset_index()
         agg_df = agg_df.sort_values(by='count', ascending=False).dropna()
         # Save the aggregations for the whole day directly into the wordcount folder
-        agg_df.to_csv(f'{subreddit}/data/wordcounts/_{date}.csv',index=False)
-        start_time += delta
+        agg_df.to_csv(f'{subreddit}/data/wordcounts/{date}.csv',index=False)
     function_elapsed_time = time.time() - function_start_time
     process_elapsed_time = time.time() - process_start_time
     print()
@@ -242,28 +227,18 @@ def count_words(start_date, end_date):
     print(f'Elapsed wordcount function time: {np.around(function_elapsed_time, 1)}s ({np.around(function_elapsed_time/60, 2)} minutes)')
     print(f'Elapsed process time: {np.around(process_elapsed_time, 1)}s ({np.around(process_elapsed_time/60, 2)} minutes)')
         
-count_words(start,end)
+count_words()
 
-def get_ngrams(start_date, end_date):
+def get_ngrams():
     print()
-    print(f'Processing r/{subreddit} ngrams for {start_date} to {end_date}')
+    print(f'Processing r/{subreddit} ngrams for {start} to {end}')
     function_start_time = time.time()
     try: os.mkdir(f'{subreddit}/data/ngrams')
     except: print(f'{subreddit}/data/ngrams directory exists')
-    # Convert dates to datetime format
-    start_time = datetime.datetime.strptime(start_date, '%Y-%m-%d')
-    end_time = datetime.datetime.strptime(end_date, '%Y-%m-%d')
-    # Advance one day at a time
-    delta = datetime.timedelta(days=1)
-    dates_list = get_dirs(f'{subreddit}/data/wordcounts/')
-    num_dates = len(dates_list)
-    i=0
-    while start_time <= end_time:
-        # Format current query date as string (for file naming, etc.)
-        date = start_time.date().strftime("%Y-%m-%d")
-        print(f'Processing ngrams for {date}... ({i}/{num_dates})')
+    dates = get_files(f'{subreddit}/data/wordcounts/')
+    for date in progressbar.progressbar(dates, redirect_stdout=True):
         # Open the aggregations for this date
-        agg_df = pd.read_csv(f'{subreddit}/data/wordcounts/_{date}.csv').set_index('word').dropna()
+        agg_df = pd.read_csv(f'{subreddit}/data/wordcounts/{date}.csv').set_index('word').dropna()
         for word in agg_df.index:
             word = str(word)
             if word[0].isdigit():
@@ -278,8 +253,6 @@ def get_ngrams(start_date, end_date):
                 except:
                     print(f'Error processing ngram {word}')
                     #pass
-        start_time += delta
-        i+=1
     function_elapsed_time = time.time() - function_start_time
     process_elapsed_time = time.time() - process_start_time
     print()
@@ -287,42 +260,38 @@ def get_ngrams(start_date, end_date):
     print(f'Elapsed ngram function time: {np.around(function_elapsed_time, 1)}s ({np.around(function_elapsed_time/60, 2)} minutes)')
     print(f'Elapsed process time: {np.around(process_elapsed_time, 1)}s ({np.around(process_elapsed_time/60, 2)} minutes)')
 
-get_ngrams(start,end)
+get_ngrams()
 
-def backfill():
+def summarize_wordcounts(subreddit):
+    print()
+    print(f'Summarizing ngram counts for r/{subreddit} from {start} to {end}')
     function_start_time = time.time()
-    post_counts = pd.read_csv(f'{subreddit}/data/post_counts.csv',names=['date','response'])
-    missing = list(post_counts[post_counts['response'].astype(str)=="HTML_ERR"]['date'])
+    try:
+        data_files = get_files(f'{subreddit}/data/')
+        if 'word_counts.csv' in data_files:
+            print('Word count summary is cached')
+            summary = pd.read_csv(f'{subreddit}/data/word_counts.csv')
+        else:
+            df = pd.DataFrame(columns=['word','count'])
+            dates = get_files(f'{subreddit}/data/wordcounts/')
+            for date in progressbar.progressbar(dates, redirect_stdout=True):
+                counts = pd.read_csv(f'{subreddit}/data/wordcounts/{date}.csv')
+                counts['count'].astype(int, errors='ignore')
+                df = pd.DataFrame(pd.concat([df, counts]).groupby('word').sum().reset_index()).sort_values('count',ascending=False)
+            print(f'Summarizing wordcounts for {subreddit}...')
+            summary = pd.DataFrame(df.groupby('word').sum().reset_index()).sort_values('count',ascending=False)
+            summary.to_csv(f'{subreddit}/data/word_counts.csv', index=False)
+            print()
+            function_elapsed_time = time.time() - function_start_time
+            process_elapsed_time = time.time() - process_start_time
+            print('--- Finished summarizing word counts ---')
+            print(f'Elapsed summarizing function time: {np.around(function_elapsed_time, 1)}s ({np.around(function_elapsed_time/60, 2)} minutes)')
+            print(f'Elapsed process time: {np.around(process_elapsed_time, 1)}s ({np.around(process_elapsed_time/60, 2)} minutes)')
+    except:
+        summary = pd.DataFrame(data={'word':['ERR'], 'count':[99999]})
+        print('Error summarizing wordcounts!')
     
-    for nr in not_recorded.keys():
-        if nr not in missing:
-            print()
-            print(f'{nr} is not in the HTML Error list; the JSON response file may be corrupted for that day.')
-            print(f'Check the link here: {not_recorded[nr]}')
-            print()
-    if len(missing)>0:
-        print()
-        print(f'Identified missing dates due to HTML ERR (API timeout): {missing}')
-        i=0
-        for m in missing:
-            print(f'Backfilling {m}... ({i}/{len(missing)}')
-            try:
-                get_days(m, m)
-                tokenize_files(m, m)
-                count_words(m, m)
-                get_ngrams(m, m)
-            except:
-                print(f'Error backfilling {m}')
-            i+=1
-        function_elapsed_time = time.time() - function_start_time
-        process_elapsed_time = time.time() - process_start_time
-        print()
-        print('--- Finished backfilling missing days ---')
-        print('NOTE: If the API was down the second time around too, there may still be missing days')
-        print(f'Elapsed backfilling function time: {np.around(function_elapsed_time, 1)}s ({np.around(function_elapsed_time/60, 2)} minutes)')
-        print(f'Elapsed process time: {np.around(process_elapsed_time, 1)}s ({np.around(process_elapsed_time/60, 2)} minutes)')
-
-#backfill()
+summarize_wordcounts(subreddit)
 
 process_elapsed_time = time.time() - process_start_time
 print()

@@ -4,3 +4,4 @@ pandas
 nltk
 numpy
 psaw
+progressbar2
