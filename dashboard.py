@@ -111,9 +111,11 @@ def visualize(subreddit):
             yaxis=dict(
                 overlaying='y2'
             ),
-            yaxis2=dict(
-                side = 'right'
-            ),
+            yaxis2={
+                'showgrid': False, # thin lines in the background
+                'zeroline': False, # thick line at x=0
+                'visible': False,  # numbers below
+            },
             hovermode='x unified'
         )
         
