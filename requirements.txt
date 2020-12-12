@@ -7,3 +7,4 @@ psaw
 progressbar2
 plotly
 dash
+dash_daq
