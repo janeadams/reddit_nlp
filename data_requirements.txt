@@ -1,7 +1,10 @@
-flask
+requests
 datetime
 pandas
+nltk
 numpy
+psaw
+progressbar2
 plotly
 dash
 dash_daq

@@ -8,6 +8,9 @@ from data import *
 
 process_start_time = time.time()
 
+try: os.mkdir(f'subreddits')
+except: print(f'subreddits/ directory exists')
+
 print('Setting up psaw API connection...')
 print('Learn more about psaw here: https://github.com/dmarx/psaw')
 api = PushshiftAPI()
@@ -17,17 +20,17 @@ subreddit = input()
 print()
 print(f"Great! We'll search the Pushshift API for posts to r/{subreddit}")
       
-try: os.mkdir(f'{subreddit}')
-except: print(f'{subreddit} directory exists')
-try: os.mkdir(f'{subreddit}/data')
-except: print(f'{subreddit}/data/ directory exists')
-try: os.mkdir(f'{subreddit}/data/posts')
-except: print(f'{subreddit}/data/posts directory exists')
+try: os.mkdir(f'subreddits/{subreddit}')
+except: print(f'subreddits/{subreddit} directory exists')
+try: os.mkdir(f'subreddits/{subreddit}/data')
+except: print(f'subreddits/{subreddit}/data/ directory exists')
+try: os.mkdir(f'subreddits/{subreddit}/data/posts')
+except: print(f'subreddits/{subreddit}/data/posts directory exists')
     
-with open(f'{subreddit}/data/post_counts.csv', 'w') as csvfile:
+with open(f'subreddits/{subreddit}/data/post_counts.csv', 'w') as csvfile:
     pass
 
-with open(f'{subreddit}/data/token_counts.csv', 'w') as csvfile:
+with open(f'subreddits/{subreddit}/data/token_counts.csv', 'w') as csvfile:
     pass
 
 print()
@@ -58,5 +61,4 @@ print('Do you want to open the ngram visualizer? [Y/n]')
 reply = input()
 
 if reply.lower() == 'y':
-    from dashboard import *
-    visualize(subreddit)
+    from dashboard import app as application
