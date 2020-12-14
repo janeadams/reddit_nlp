@@ -7,6 +7,12 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_daq as daq
+from flask import Flask
+import os
+
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
     
 def freq_to_odds(freq):
     try: return 1.0/freq
@@ -50,7 +56,7 @@ def set_subreddit(subreddit):
         
     return common, options, default_single, default_multi
 
-subreddit='Minecraft'
+subreddit='AskDocs'
 
 subreddit_list = get_dirs('subreddits/')
 subreddit_options = []
@@ -91,19 +97,19 @@ def single_plot(ngram,metric,subreddit,token_counts,post_counts):
                  )
     fig.add_trace(go.Scatter(x=df['date'], y=df['WMA'],
                         mode='lines',
-                        name=f'Weekly Rolling Average {metric.title()}',
+                        name=f'Weekly Rolling Avg. {metric.title()}',
                         line=dict(color='DarkTurquoise', width=2)
                      ),
                  )
     fig.add_trace(go.Scatter(x=df['date'], y=df['MMA'],
                         mode='lines',
-                        name=f'Monthly Rolling Average {metric.title()}',
+                        name=f'Monthly Rolling Avg. {metric.title()}',
                         line=dict(color='GoldenRod', width=3)
                      ),
                  )
     fig.add_trace(go.Scatter(x=df['date'], y=df['AMA'],
                         mode='lines',
-                        name=f'Annual Rolling Average {metric.title()}',
+                        name=f'Annual Rolling Avg. {metric.title()}',
                         line=dict(color='Crimson', width=2, dash='dash')
                      ),
                  )
@@ -146,7 +152,7 @@ def multi_plot(ngrams,metric,subreddit,token_counts,post_counts):
         df = format_data(ngram,metric,subreddit)
         fig.add_trace(go.Scatter(x=df['date'], y=df['WMA'],
                             mode='lines',
-                            name=f'"{ngram}" (7-day Avg.)',
+                            name=f'"{ngram}" (7-day Rolling Avg.)',
                             opacity=0.3,
                             line=dict(color=colors[i]),
                             showlegend=False
@@ -154,14 +160,14 @@ def multi_plot(ngrams,metric,subreddit,token_counts,post_counts):
                      )
         fig.add_trace(go.Scatter(x=df['date'], y=df['MMA'],
                             mode='lines',
-                            name=f'"{ngram}" 30-Day {metric.title()}',
+                            name=f'"{ngram}" 30-Day {metric.title()} Rolling Avg.',
                             line=dict(width=2, color=colors[i]),
                             hoverinfo='skip'
                          ),
                      )
         fig.add_trace(go.Scatter(x=df['date'], y=df['AMA'],
                             mode='lines',
-                            name=f'Annual Moving Average {metric.title()}',
+                            name=f'Annual Rolling Avg. {metric.title()}',
                             line=dict(width=1, dash='dash', color=colors[i]),
                             showlegend=False,
                             hoverinfo='skip'
@@ -180,13 +186,21 @@ def multi_plot(ngrams,metric,subreddit,token_counts,post_counts):
         fig.update_layout(yaxis=({'autorange':"reversed","type":"log"}))
     return fig
 
-app = dash.Dash()
+server = Flask(__name__)
+server.secret_key ='test'
+#server.secret_key = os.environ.get('secret_key', 'secret')
+app = dash.Dash(name = __name__, server = server)
+#app.config.suppress_callback_exceptions = True
+
 app.layout = html.Div([
+    html.H1('Subreddit ngram viewer'),
+    html.H2('Select a subreddit'),
     dcc.Dropdown(
         id='subreddit-dropdown',
         options=subreddit_options,
-        value='Minecraft'
+        value='AskDocs'
     ),
+    html.H2('Select a single ngram'),
     dcc.Dropdown(
         id='single-dropdown',
         options=options,
@@ -194,9 +208,11 @@ app.layout = html.Div([
     ),
     daq.BooleanSwitch(
         id='switch',
+        label='counts/freq',
         on=True
     ),
     dcc.Graph(id='single-plot'),
+    html.H2('Select multiple ngrams'),
     dcc.Dropdown(
         id='multi-dropdown',
         options=options,
@@ -241,4 +257,5 @@ def update_output(subreddit,single,multi,on):
     token_counts, post_counts = get_counts(subreddit)
     return single_plot(single,metric,subreddit,token_counts,post_counts), multi_plot(multi,metric,subreddit,token_counts,post_counts)
 
-app.run_server(debug=True)
+if __name__ == '__main__':
+    app.run_server(debug=True)

@@ -205,35 +205,7 @@ def count_words(start, end, subreddit, process_start_time):
     print('--- Finished counting words ---')
     print(f'Elapsed wordcount function time: {np.around(function_elapsed_time, 1)}s ({np.around(function_elapsed_time/60, 2)} minutes)')
     print(f'Elapsed process time: {np.around(process_elapsed_time, 1)}s ({np.around(process_elapsed_time/60, 2)} minutes)')
-      
-        
-def get_ngrams(start, end, subreddit, process_start_time):
-    print()
-    print(f'Processing r/{subreddit} ngrams for {start} to {end}')
-    function_start_time = time.time()
-    try: os.mkdir(f'subreddits/{subreddit}/data/ngrams')
-    except: print(f'subreddits/{subreddit}/data/ngrams directory exists')
-    dates = get_files(f'subreddits/{subreddit}/data/wordcounts/')
-    for date in progressbar.progressbar(dates, redirect_stdout=True):
-        # Open the aggregations for this date
-        agg_df = pd.read_csv(f'subreddits/{subreddit}/data/wordcounts/{date}.csv').set_index('word').dropna()
-        for word in agg_df.index:
-            word = str(word)
-            try:
-                count = agg_df.loc[word]['count']
-                freq = agg_df.loc[word]['freq']
-                with open(f'subreddits/{subreddit}/data/ngrams/{word}.csv', 'a') as csvfile:
-                    writer = csv.writer(csvfile)
-                    writer.writerow([date,count,freq])
-            except:
-                #print(f'Error processing ngram {word}')
-                pass
-    function_elapsed_time = time.time() - function_start_time
-    process_elapsed_time = time.time() - process_start_time
-    print()
-    print('--- Finished getting ngram timeseries ---')
-    print(f'Elapsed ngram function time: {np.around(function_elapsed_time, 1)}s ({np.around(function_elapsed_time/60, 2)} minutes)')
-    print(f'Elapsed process time: {np.around(process_elapsed_time, 1)}s ({np.around(process_elapsed_time/60, 2)} minutes)')
+
 
 def summarize_wordcounts(start, end, subreddit, process_start_time):
     print()
@@ -263,3 +235,35 @@ def summarize_wordcounts(start, end, subreddit, process_start_time):
     except:
         summary = pd.DataFrame(data={'word':['ERR'], 'count':[99999]})
         print('Error summarizing wordcounts!')
+        
+def get_ngrams(start, end, subreddit, process_start_time, threshold):
+    print()
+    print(f'Processing r/{subreddit} ngrams used more than {threshold} time(s) from {start} to {end}')
+    function_start_time = time.time()
+    try: os.mkdir(f'subreddits/{subreddit}/data/ngrams')
+    except: print(f'subreddits/{subreddit}/data/ngrams directory exists')
+    dates = get_files(f'subreddits/{subreddit}/data/wordcounts/')
+    wordcounts = pd.read_csv(f'subreddits/{subreddit}/data/word_counts.csv')
+    wordlist=list(wordcounts[wordcounts['count']>threshold]['word'])
+    for date in progressbar.progressbar(dates, redirect_stdout=True):
+        # Open the aggregations for this date
+        agg_df = pd.read_csv(f'subreddits/{subreddit}/data/wordcounts/{date}.csv').set_index('word').dropna()
+        for word in agg_df.index:
+            word = str(word)
+            if word in wordlist:
+                try:
+                    count = agg_df.loc[word]['count']
+                    freq = agg_df.loc[word]['freq']
+                    with open(f'subreddits/{subreddit}/data/ngrams/{word}.csv', 'a') as csvfile:
+                        writer = csv.writer(csvfile)
+                        writer.writerow([date,count,freq])
+                except:
+                    #print(f'Error processing ngram {word}')
+                    pass
+    function_elapsed_time = time.time() - function_start_time
+    process_elapsed_time = time.time() - process_start_time
+    print()
+    print('--- Finished getting ngram timeseries ---')
+    print(f'Elapsed ngram function time: {np.around(function_elapsed_time, 1)}s ({np.around(function_elapsed_time/60, 2)} minutes)')
+    print(f'Elapsed process time: {np.around(process_elapsed_time, 1)}s ({np.around(process_elapsed_time/60, 2)} minutes)')
+        

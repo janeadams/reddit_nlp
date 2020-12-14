@@ -41,15 +41,19 @@ print()
 print('Enter end date in the format YYYY-MM-DD:')
 end = input()
 
+print()
+print("Only save ngrams that are used more than X times (recommended entry: 1; enter 0 to save all)")
+threshold = int(input())
+
 get_days(start, end, subreddit, api, process_start_time)
  
 tokenize_files(start, end, subreddit, process_start_time)
   
 count_words(start, end, subreddit, process_start_time)
-
-get_ngrams(start, end, subreddit, process_start_time)
     
 summarize_wordcounts(start, end, subreddit, process_start_time)
+
+get_ngrams(start, end, subreddit, process_start_time, threshold)
 
 process_elapsed_time = time.time() - process_start_time
 print()

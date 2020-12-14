@@ -1,1 +1,3 @@
-from dashboard import app as application
+from dashboard import server as application
+from os import path
+application
