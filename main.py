@@ -55,10 +55,3 @@ process_elapsed_time = time.time() - process_start_time
 print()
 print('--- Finished process! ---')
 print(f'Elapsed time: {np.around(process_elapsed_time, 1)}s ({np.around(process_elapsed_time/60, 2)} minutes)')
-
-print()
-print('Do you want to open the ngram visualizer? [Y/n]')
-reply = input()
-
-if reply.lower() == 'y':
-    from dashboard import app as application
