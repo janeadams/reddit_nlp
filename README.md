@@ -30,10 +30,16 @@ Run the main visualization script using Python 3.6 or higher:
 The script will look in the `subreddits` directory for a list of all subreddits for which you have pulled data. Dash will spin up a local server at `localhost:8050` - you can view the dashboard at `http://127.0.0.1:8050`
 
 ### Filtering ngram data
-If you have saved a lot of ngrams to disk, and you'd like to remove those that are infrequently used, you can make use of the `remove.py` script to filter out rarely used ngrams:
-`python remove.py`
+If you have saved a lot of ngrams to disk, and you'd like to remove those that are infrequently used, you can make use of the `remove_ngrams.py` script to filter out rarely used ngrams:
+`python remove_ngrams.py`
 
-Enter the subreddit directory you'd like to filter (e.g. `AskDocs`), then choose a threshold. This will remove any ngrams that appear less than the entered number (so if you'd like to remove all ngrams that have only been used once, enter `2`.
+Enter the subreddit directory you'd like to filter (e.g. `AskDocs`), then choose a threshold (you can get an idea of ngrams at each threshold from the automatic printout). This script will remove any ngrams that appear less than the entered number (so if you'd like to remove all ngrams that have only been used once, enter `2`).
+
+### Removing date ranges
+If you've downloaded some date ranges that contain little to no data, and you'd like to remove those ngrams and related files, you can make use of the `remove_days.py` script to filter out a range of dates:
+`python remove_days.py`
+
+Enter the subreddit directory you'd like to filter, then choose start and end dates (YYYY-MM-DD). This script will remove any posts, tokens, and wordcounts folders/files for those dates, remove those date entries from the ngram files, and recompute aggregated word counts.
 
 ### Running the dashboard on a server
 In order to run the dashboard on a server, you'll need a server running uwsgi. A `wsgi.py` script is included for running the dashboard application. You don't need to upload the `posts/` or `tokens/` folders for each subreddit, but you will need to upload the `ngrams` directory for each subreddit in the original `subreddits/{subreddit}/data/` directory structure, along with the summary files `word_counts.csv` and `post_counts.csv`.
@@ -58,7 +64,7 @@ File structure is as follows (in the order of usage):
             - `post_counts.csv`
             + `posts`
                 + `{date}`
-                    - `{post_id}.txt` (in base64): raw text from API `selftext` field\
+                    - `{post_id}.txt` (in base64): raw text from API `selftext` field
             - `token_counts.csv`
             + `tokens`
                 + `{date}`
@@ -69,7 +75,7 @@ File structure is as follows (in the order of usage):
             + `wordcounts`
                 - `{date}.csv`: Word counts aggregated by day
                 + `{date}`
-                    - `{post_id}.csv` (in base64): word counts for each post\
+                    - `{post_id}.csv` (in base64): word counts for each post
 - `data.py` : contains all the data processing functions
 - `dashboard.py` : contains all the visualization functions
 - `wsgi.py`: uwsgi script for running the dashboard on a web server

@@ -36,7 +36,7 @@ def get_dirs(path):
 
 def get_ngrams(subreddit):
     summ=pd.read_csv(f'subreddits/{subreddit}/data/word_counts.csv')
-    common=summ[summ['count']>5]['word']
+    common=summ[summ['count']>4]['word']
     return common
 
 def set_subreddit(subreddit):
@@ -84,13 +84,19 @@ def format_data(ngram,metric,subreddit):
     df['AMA'] = df[metric].rolling(365, min_periods=1).mean()
     return df
 
+def make_title(metric):
+    title = metric.title()
+    if metric == 'odds':
+        title = title + ' (1 in X non-stopwords)'
+    return title
+
 def single_plot(ngram,metric,subreddit,token_counts,post_counts):
 
     df = format_data(ngram,metric,subreddit)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df['date'], y=df[metric],
                         mode='markers',
-                        name=f'Daily {metric.title()}',
+                        name=f'Daily {make_title(metric)}',
                         marker_color='PowderBlue'
                         #visible='legendonly'
                      ),
@@ -119,14 +125,13 @@ def single_plot(ngram,metric,subreddit,token_counts,post_counts):
         y = token_counts['token_count'],
         name="Daily word count",
         yaxis='y2',
-        marker_color='LightGrey',
-        showlegend=False
+        marker_color='LightGrey'
     ))
 
     fig.update_layout(
         title=f'Subreddit r/{subreddit}: Usage {metric.title()} for "{ngram}"',
         xaxis_title="Date",
-        yaxis_title=f'Ngram {metric}',
+        yaxis_title=f'Ngram {make_title(metric)}',
         template='plotly_white',
         height=500,
         yaxis=dict(
@@ -177,7 +182,7 @@ def multi_plot(ngrams,metric,subreddit,token_counts,post_counts):
     fig.update_layout(
         title=f'Subreddit r/{subreddit}: Usage {metric.title()} for {ngrams}',
         xaxis_title="Date",
-        yaxis_title=f'Ngram {metric}',
+        yaxis_title=f'Ngram {make_title(metric)}',
         template='plotly_white',
         height=500,
         hovermode='x unified'

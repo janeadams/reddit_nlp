@@ -3,20 +3,17 @@ from os import walk
 import pandas as pd
 import progressbar
 import numpy as np
-
-def get_files(path):
-    files = []
-    for (dirpath, dirnames, filenames) in walk(path):
-        files.extend(filenames)
-        break
-    str_files = [str(f)[:-4] for f in files]
-    return str_files
+from data import *
 
 def get_thresholds(subreddit):
-    for i in range(1,10):
+    for i in range(2,10):
         n = wordcounts[wordcounts['count']<i].shape[0]
-        pct = np.around((n/wordcounts.shape[0])*100)
-        print(f'There are {n} words used less than {i} times ({pct}%)')
+        m = wordcounts[wordcounts['count']>i].shape[0]
+        pct_n = np.around((n/wordcounts.shape[0])*100)
+        pct_m = np.around((m/wordcounts.shape[0])*100)
+        print(f'There are {n} words used less than {i} times ({pct_n}%)')
+        print(f'and {m} words used more than {i} times ({pct_m}%)')
+        print()
 
 def get_removal_list(subreddit,threshold):
     removal_list=list(wordcounts[wordcounts['count']<threshold]['word'])
@@ -36,6 +33,7 @@ def remove_words(subreddit,threshold):
     print(f'Removed {i} ngrams from {subreddit} ngrams directory')
     
 print("Which subreddit (case-sensitive) would you like to filter? (Don't include 'r/'):")
+print(f'Subreddits available: {get_dirs("subreddits/")}')
 subreddit = input()
 print()
 wordcounts = pd.read_csv(f'subreddits/{subreddit}/data/word_counts.csv')

@@ -222,7 +222,7 @@ def summarize_wordcounts(start, end, subreddit, process_start_time):
             for date in progressbar.progressbar(dates, redirect_stdout=True):
                 counts = pd.read_csv(f'subreddits/{subreddit}/data/wordcounts/{date}.csv').drop(columns=['freq'])
                 counts['count'].astype(int, errors='ignore')
-                df = pd.DataFrame(pd.concat([df, counts]).groupby('word').sum().reset_index()).sort_values('count',ascending=False)
+                df = pd.DataFrame(pd.concat([df, counts]).groupby('word').sum().reset_index()).sort_values('count',ascending=False) #TODO: Change this to writing rows to a csv
             print(f'Summarizing wordcounts for {subreddit}...')
             summary = pd.DataFrame(df.groupby('word').sum().reset_index()).sort_values('count',ascending=False)
             summary.to_csv(f'subreddits/{subreddit}/data/word_counts.csv', index=False)
