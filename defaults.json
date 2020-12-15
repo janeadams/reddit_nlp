@@ -5,6 +5,8 @@
     "COVID19positive": ["smell", ["tested", "smell", "taste"]],
     "WeightLossAdvice": ["keto", ["diet", "exercise", "calories", "fasting"]],
     "StopSmoking": ["vaping", ["vaping","gum","patches"]],
-    "depression": ["therapy", ["hopeless", "hope"]]
+    "depression": ["therapy", ["hopeless", "hope"]],
+    "birthcontrol": ["pregnant", ["pill", "iud", "nexplanon"]],
+    "fitness": ["gym", ["gym", "home"]]
 }
     
