@@ -8,31 +8,22 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_daq as daq
 from flask import Flask
-import os
+import json
+
+from data import *
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
+
+defaults = {}
+
+with open('defaults.json') as f:
+    defaults = json.load(f)
     
 def freq_to_odds(freq):
     try: return 1.0/freq
     except: return None
-
-def get_files(path):
-    files = []
-    for (dirpath, dirnames, filenames) in walk(path):
-        files.extend(filenames)
-        break
-    str_files = [str(f)[:-4] for f in files]
-    return str_files
-
-def get_dirs(path):
-    directories = []
-    for (dirpath, dirnames, filenames) in walk(path):
-        directories.extend(dirnames)
-        break
-    str_directories = [str(d) for d in directories if not (str(d)[0] in ['.','_'])]
-    return str_directories
 
 def get_ngrams(subreddit):
     summ=pd.read_csv(f'subreddits/{subreddit}/data/word_counts.csv')
@@ -47,9 +38,9 @@ def set_subreddit(subreddit):
     for n in common:
         options.append({'label': n, 'value': n})
 
-    if subreddit == "AskDocs":
-        default_single = "flu"
-        default_multi = ["flu","depression","covid"]
+    if subreddit in list(defaults.keys()):
+        default_single = defaults[subreddit][0]
+        default_multi = defaults[subreddit][1]
     else:
         default_single = common[0]
         default_multi = [common[0], common[1], common[2]]

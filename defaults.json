@@ -1,0 +1,10 @@
+{
+    "AskDocs": ["flu", ["flu", "depression", "covid"]],
+    "cancer": ["chemo", ["support", "family", "diagnosed"]],
+    "medical": ["allergies", ["doctor", "sleep", "anxiety"]],
+    "COVID19positive": ["smell", ["tested", "smell", "taste"]],
+    "WeightLossAdvice": ["keto", ["diet", "exercise", "calories", "fasting"]],
+    "StopSmoking": ["vaping", ["vaping","gum","patches"]],
+    "depression": ["therapy", ["hopeless", "hope"]]
+}
+    

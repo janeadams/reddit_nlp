@@ -8,32 +8,47 @@ from data import *
 
 process_start_time = time.time()
 
+def get_removal_list(datelist):
+    remove_dates = []
+    for date in datelist:
+        date_time = datetime.datetime.strptime(date, '%Y-%m-%d')
+        if start_time <= date_time <= end_time:
+            remove_dates.append(date)
+    return remove_dates
+
 def remove_files():
     print()
     print(f'Removing r/{subreddit} post, token, and wordcounts from {start_date} to {end_date}...')
-    remove_dates = []
-    start_time = datetime.datetime.strptime(start_date, '%Y-%m-%d')
-    end_time = datetime.datetime.strptime(end_date, '%Y-%m-%d')
-    post_dates = get_dirs(f'subreddits/{subreddit}/data/posts')
-    for post_date in progressbar.progressbar(post_dates, redirect_stdout=True):
-        post_time = datetime.datetime.strptime(post_date, '%Y-%m-%d')
-        if start_time <= post_time <= end_time:
-            remove_dates.append(post_date)
-            for folder in [f'subreddits/{subreddit}/data/posts/{post_date}',
-                         f'subreddits/{subreddit}/data/tokens/{post_date}',
-                         f'subreddits/{subreddit}/data/wordcounts/{post_date}'
-                        ]:
-                try:
-                    os.rmdir(folder)
-                except:
-                    print(f'{folder} does not exist' )
-                    #pass
+    
+    for folder in ['posts','tokens','wordcounts']:
+        datelist = get_dirs(f'subreddits/{subreddit}/data/{folder}')
+        remove_dates = get_removal_list(datelist)
+        for folder_date in datelist:
             try:
-                os.remove(f'subreddits/{subreddit}/data/wordcounts/{post_date}.csv')
+                os.rmdir(f'subreddits/{subreddit}/data/{folder}/{folder_date}')
             except:
-                pass
-    print(f'Removed {len(remove_dates)} days from {subreddit} post, token, and wordcount data')
+                print(f'subreddits/{subreddit}/data/{folder}/{folder_date} does not exist' )
+                #pass
+            print(f'Removed {len(remove_dates)} days from {subreddit} {folder} folder')
+                        
+    wordcount_dates = get_files(f'subreddits/{subreddit}/data/wordcounts/')
+    remove_dates = get_removal_list(wordcount_dates)
+    try:
+        os.remove(f'subreddits/{subreddit}/data/wordcounts/{post_date}.csv')
+    except:
+        pass
+    print(f'Removed {len(remove_dates)} days from {subreddit} wordcount data')
     return remove_dates
+
+def remove_aggregate_counts(aggnames):
+    for agg in aggnames:
+        print()
+        print(f'Removing r/{subreddit} {agg} counts from {start_date} to {end_date}...')
+        df = pd.read_csv(f'subreddits/{subreddit}/data/{agg}_counts.csv', names=['date', agg])
+        remove_dates = get_removal_list(df['date'])
+        filtered = df[~df['date'].isin(remove_dates)].sort_values(by='date').set_index('date')
+        filtered.to_csv(f'subreddits/{subreddit}/data/{agg}_counts.csv', header=False)
+    
     
 def remove_ngram_entries():
     print()
@@ -41,7 +56,8 @@ def remove_ngram_entries():
     ngrams = get_files(f'subreddits/{subreddit}/data/ngrams')
     for ngram in progressbar.progressbar(ngrams, redirect_stdout=True):
         df = pd.read_csv(f'subreddits/{subreddit}/data/ngrams/{ngram}.csv', names=['date', 'count', 'freq'])
-        filtered = df[~df['date'].isin(remove_dates)]
+        remove_dates = get_removal_list(df['date'])
+        filtered = df[~df['date'].isin(remove_dates)].sort_values(by='date')
         filtered.to_csv(f'subreddits/{subreddit}/data/ngrams/{ngram}.csv', header=False)
     
 print("Which subreddit (case-sensitive) would you like to filter? (Don't include 'r/'):")
@@ -58,10 +74,14 @@ print('Enter end date in the format YYYY-MM-DD:')
 end_date = input()
 end_time = datetime.datetime.strptime(end_date, '%Y-%m-%d')
     
-remove_dates = remove_files()
+remove_files()
+
+remove_aggregate_counts(['post','token'])
 
 remove_ngram_entries()
 
-new_datelist = get_dirs(f'subreddits/{subreddit}/data/posts')
-
-summarize_wordcounts(new_datelist[0], new_datelist[-1], subreddit, process_start_time)
+try:
+    new_datelist = get_dirs(f'subreddits/{subreddit}/data/posts')
+    summarize_wordcounts(new_datelist[0], new_datelist[-1], subreddit, process_start_time)
+except:
+    print(f'Error summarizing new wordcounts')

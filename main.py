@@ -42,7 +42,7 @@ print('Enter end date in the format YYYY-MM-DD:')
 end = input()
 
 print()
-print("Only save ngrams that are used more than X times (recommended entry: 1; enter 0 to save all)")
+print("Only save ngrams that are used more than X times (recommended entry: 1-4; enter 0 to save all)")
 threshold = int(input())
 
 get_days(start, end, subreddit, api, process_start_time)
